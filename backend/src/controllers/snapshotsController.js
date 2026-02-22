@@ -1,136 +1,56 @@
-// src/controllers/snapshotsController.js
-// Pure data-access functions — no Express req/res here.
-// Each function is unit-testable in isolation.
+const snapshotService = require("../services/snapshotsService");
 
-const { v4: uuidv4 } = require("uuid");
-const { getDb } = require("../database/db");
+// Create
+function createSnapshot(req, res) {
+  const { name, notes, urls, files, tags } = req.body;
 
-// ─── helpers ────────────────────────────────────────────────────────────────
-
-/** Serialise array fields to JSON strings for SQLite storage. */
-const toRow = ({
-  id,
-  name,
-  notes = "",
-  status = "active",
-  urls = [],
-  files = [],
-  tags = [],
-}) => ({
-  id,
-  name,
-  notes,
-  status,
-  urls: JSON.stringify(urls),
-  files: JSON.stringify(files),
-  tags: JSON.stringify(tags),
-});
-
-/** Deserialise a raw SQLite row into a clean JS object. */
-const fromRow = (row) => {
-  if (!row) return null;
-  return {
-    id: row.id,
-    name: row.name,
-    notes: row.notes,
-    status: row.status,
-    urls: JSON.parse(row.urls || "[]"),
-    files: JSON.parse(row.files || "[]"),
-    tags: JSON.parse(row.tags || "[]"),
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
-};
-
-// ─── CRUD ────────────────────────────────────────────────────────────────────
-
-/**
- * Create a new snapshot.
- * @param {{ name, notes?, urls?, files?, tags? }} fields
- */
-function createSnapshot(fields) {
-  const db = getDb();
-  const row = toRow({ id: uuidv4(), ...fields });
-
-  db.prepare(
-    `
-    INSERT INTO snapshots (id, name, notes, status, urls, files, tags)
-    VALUES (@id, @name, @notes, @status, @urls, @files, @tags)
-  `,
-  ).run(row);
-
-  return fromRow(
-    db.prepare("SELECT * FROM snapshots WHERE id = ?").get(row.id),
-  );
-}
-
-/**
- * Return all snapshots, optionally filtered by status.
- * @param {string|undefined} status  'active' | 'paused' | 'complete'
- */
-function getSnapshots(status) {
-  const db = getDb();
-  const rows = status
-    ? db
-        .prepare(
-          "SELECT * FROM snapshots WHERE status = ? ORDER BY created_at DESC",
-        )
-        .all(status)
-    : db.prepare("SELECT * FROM snapshots ORDER BY created_at DESC").all();
-  return rows.map(fromRow);
-}
-
-/**
- * Return a single snapshot by ID, or null if not found.
- * @param {string} id
- */
-function getSnapshotById(id) {
-  return fromRow(
-    getDb().prepare("SELECT * FROM snapshots WHERE id = ?").get(id),
-  );
-}
-
-/**
- * Update allowed fields on a snapshot.
- * @param {string} id
- * @param {{ name?, notes?, status?, urls?, files?, tags? }} fields
- */
-function updateSnapshot(id, fields) {
-  const db = getDb();
-  const ALLOWED = ["name", "notes", "status", "urls", "files", "tags"];
-  const updates = {};
-
-  for (const key of ALLOWED) {
-    if (fields[key] !== undefined) {
-      updates[key] = Array.isArray(fields[key])
-        ? JSON.stringify(fields[key])
-        : fields[key];
-    }
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: "name is required" });
   }
 
-  if (Object.keys(updates).length === 0) return getSnapshotById(id);
+  const snapshot = snapshotService.createSnapshot({
+    name: name.trim(),
+    notes: notes ?? "",
+    urls: Array.isArray(urls) ? urls : [],
+    files: Array.isArray(files) ? files : [],
+    tags: Array.isArray(tags) ? tags : [],
+  });
 
-  const setClauses = Object.keys(updates)
-    .map((k) => `${k} = @${k}`)
-    .join(", ");
-  db.prepare(
-    `
-    UPDATE snapshots
-    SET ${setClauses}, updated_at = datetime('now')
-    WHERE id = @id
-  `,
-  ).run({ ...updates, id });
-
-  return getSnapshotById(id);
+  res.status(201).json({ data: snapshot });
 }
 
-/**
- * Delete a snapshot. Returns true if a row was deleted.
- * @param {string} id
- */
-function deleteSnapshot(id) {
-  const info = getDb().prepare("DELETE FROM snapshots WHERE id = ?").run(id);
-  return info.changes > 0;
+// Get all
+function getSnapshots(req, res) {
+  const { status } = req.query;
+  const data = snapshotService.getSnapshots(status);
+  res.json({ data });
+}
+
+// Get by id
+function getSnapshotById(req, res) {
+  const snapshot = snapshotService.getSnapshotById(req.params.id);
+  if (!snapshot) {
+    return res.status(404).json({ error: "Snapshot not found" });
+  }
+  res.json({ data: snapshot });
+}
+
+// Update
+function updateSnapshot(req, res) {
+  const updated = snapshotService.updateSnapshot(req.params.id, req.body);
+  if (!updated) {
+    return res.status(404).json({ error: "Snapshot not found" });
+  }
+  res.json({ data: updated });
+}
+
+// Delete
+function deleteSnapshot(req, res) {
+  const deleted = snapshotService.deleteSnapshot(req.params.id);
+  if (!deleted) {
+    return res.status(404).json({ error: "Snapshot not found" });
+  }
+  res.status(204).end();
 }
 
 module.exports = {
