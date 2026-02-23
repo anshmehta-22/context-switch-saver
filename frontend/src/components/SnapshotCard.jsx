@@ -1,9 +1,9 @@
 // src/components/SnapshotCard.jsx
 // Card shown in the list view — name, status badge, tags, timestamps, actions.
 
-import { formatDistanceToNow } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
-import StatusBadge from './StatusBadge';
+import { formatDistanceToNow } from "date-fns";
+import { useNavigate } from "react-router-dom";
+import StatusBadge from "./StatusBadge";
 
 export default function SnapshotCard({ snapshot, onReload, onStatusChange }) {
   const navigate = useNavigate();
@@ -29,13 +29,16 @@ export default function SnapshotCard({ snapshot, onReload, onStatusChange }) {
           </h2>
 
           <p className="text-xs text-gray-500 mt-0.5">
-            {urls.length} URL{urls.length !== 1 ? 's' : ''}
+            {urls.length} URL{urls.length !== 1 ? "s" : ""}
           </p>
 
           {tags.length > 0 && (
             <div className="flex gap-1 flex-wrap mt-2">
-              {tags.map(t => (
-                <span key={t} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">
+              {tags.map((t) => (
+                <span
+                  key={t}
+                  className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full"
+                >
                   {t}
                 </span>
               ))}
@@ -45,18 +48,26 @@ export default function SnapshotCard({ snapshot, onReload, onStatusChange }) {
 
         {/* ── Actions ── */}
         <div className="flex flex-col gap-2 shrink-0">
-          <button className="btn-primary text-xs px-3 py-1.5" onClick={() => onReload(snapshot)}>
+          <button
+            className="btn-primary text-xs px-3 py-1.5"
+            onClick={() => onReload(snapshot)}
+          >
             ↩ Reload
           </button>
-          <button className="btn-secondary text-xs px-3 py-1.5" onClick={() => navigate(`/snapshots/${id}`)}>
+          <button
+            className="btn-secondary text-xs px-3 py-1.5"
+            onClick={() => navigate(`/snapshots/${id}`)}
+          >
             View
           </button>
-          {status !== 'complete' && (
+          {status !== "complete" && (
             <button
               className="text-xs text-gray-400 hover:text-gray-600 transition"
-              onClick={() => onStatusChange(id, status === 'active' ? 'paused' : 'active')}
+              onClick={() =>
+                onStatusChange(id, status === "active" ? "paused" : "active")
+              }
             >
-              {status === 'active' ? '⏸ Pause' : '▶ Resume'}
+              {status === "active" ? "⏸ Pause" : "▶ Resume"}
             </button>
           )}
         </div>

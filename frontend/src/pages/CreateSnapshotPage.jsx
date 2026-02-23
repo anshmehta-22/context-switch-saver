@@ -1,24 +1,26 @@
 // src/pages/CreateSnapshotPage.jsx
 // Wraps SnapshotForm and handles the POST to the API.
 
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import SnapshotForm from '../components/SnapshotForm';
-import * as api from '../api';
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import SnapshotForm from "../components/SnapshotForm";
+import * as api from "../api";
+import toast from "react-hot-toast";
 
 export default function CreateSnapshotPage() {
   const [loading, setLoading] = useState(false);
-  const [error,   setError]   = useState('');
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleSave = async (fields) => {
     try {
       setLoading(true);
-      setError('');
+      setError("");
       await api.createSnapshot(fields);
-      navigate('/');
+      toast.success("Snapshot saved !");
+      navigate("/");
     } catch (err) {
-      setError(err.message);
+      toast.error(err.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -27,7 +29,10 @@ export default function CreateSnapshotPage() {
   return (
     <div className="max-w-xl mx-auto">
       <div className="mb-6">
-        <button onClick={() => navigate('/')} className="text-sm text-indigo-600 hover:underline mb-2 inline-block">
+        <button
+          onClick={() => navigate("/")}
+          className="text-sm text-indigo-600 hover:underline mb-2 inline-block"
+        >
           ← Back
         </button>
         <h1 className="text-2xl font-bold text-gray-900">New Snapshot</h1>

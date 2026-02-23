@@ -1,29 +1,36 @@
 // src/pages/SnapshotDetailPage.jsx
 // Full detail view — view + inline-edit notes, change status, delete.
 
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import StatusBadge from '../components/StatusBadge';
-import * as api from '../api';
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import StatusBadge from "../components/StatusBadge";
+import * as api from "../api";
+import toast from "react-hot-toast";
+import Skeleton from "react-loading-skeleton";
+import "react-loading-skeleton/dist/skeleton.css";
 
-const STATUS_OPTIONS = ['active', 'paused', 'complete'];
+const STATUS_OPTIONS = ["active", "paused", "complete"];
 
 export default function SnapshotDetailPage() {
-  const { id }  = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
 
-  const [snap,         setSnap]         = useState(null);
-  const [loading,      setLoading]      = useState(true);
-  const [error,        setError]        = useState('');
+  const [snap, setSnap] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [editingNotes, setEditingNotes] = useState(false);
-  const [notes,        setNotes]        = useState('');
+  const [notes, setNotes] = useState("");
 
   // ── Fetch ────────────────────────────────────────────────────────────────
   useEffect(() => {
-    api.getSnapshot(id)
-      .then(data => { setSnap(data); setNotes(data.notes); })
-      .catch(err  => setError(err.message))
-      .finally(()  => setLoading(false));
+    api
+      .getSnapshot(id)
+      .then((data) => {
+        setSnap(data);
+        setNotes(data.notes);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
   }, [id]);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -38,60 +45,107 @@ export default function SnapshotDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!confirm(`Delete "${snap.name}"? This cannot be undone.`)) return;
-    await api.deleteSnapshot(id);
-    navigate('/');
+    try {
+      await api.deleteSnapshot(id);
+
+      toast.success("Snapshot deleted");
+
+      setTimeout(() => {
+        navigate("/");
+      }, 200);
+    } catch (err) {
+      toast.error(err.message || "Failed to delete snapshot");
+    }
   };
 
-  const saveNotes = () => { update({ notes }); setEditingNotes(false); };
+  const saveNotes = () => {
+    update({ notes });
+    setEditingNotes(false);
+  };
 
-  const openAll = () => snap.urls?.forEach(u => window.open(u, '_blank', 'noopener'));
+  const openAll = () =>
+    snap.urls?.forEach((u) => window.open(u, "_blank", "noopener"));
 
   // ── Render ───────────────────────────────────────────────────────────────
-  if (loading) return <p className="text-gray-400 text-sm py-12 text-center">Loading…</p>;
-  if (error)   return <p className="text-red-500 text-sm py-12 text-center">{error}</p>;
-  if (!snap)   return null;
+  if (loading) {
+    return (
+      <div className="max-w-xl mx-auto space-y-4">
+        <Skeleton height={30} width="60%" />
+        <Skeleton height={20} width="40%" />
+        <Skeleton height={100} />
+        <Skeleton height={20} width="80%" />
+      </div>
+    );
+  }
+  if (error)
+    return <p className="text-red-500 text-sm py-12 text-center">{error}</p>;
+  if (!snap) return null;
 
   return (
     <div className="max-w-xl mx-auto">
-      <button onClick={() => navigate('/')} className="text-sm text-indigo-600 hover:underline mb-4 inline-block">
+      <button
+        onClick={() => navigate("/")}
+        className="text-sm text-indigo-600 hover:underline mb-4 inline-block"
+      >
         ← Back
       </button>
 
       <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm space-y-6">
-
         {/* ── Header ── */}
         <div className="flex items-start justify-between gap-4">
-          <h1 className="text-xl font-bold text-gray-900 leading-snug">{snap.name}</h1>
+          <h1 className="text-xl font-bold text-gray-900 leading-snug">
+            {snap.name}
+          </h1>
           <select
             value={snap.status}
-            onChange={e => update({ status: e.target.value })}
+            onChange={(e) => update({ status: e.target.value })}
             className="text-sm border border-gray-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-500 shrink-0"
           >
-            {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
           </select>
         </div>
 
         {/* ── Notes ── */}
         <section>
           <div className="flex items-center justify-between mb-1">
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Notes</h2>
-            {editingNotes
-              ? <button onClick={saveNotes}  className="text-xs text-indigo-600 hover:underline font-semibold">Save</button>
-              : <button onClick={() => setEditingNotes(true)} className="text-xs text-gray-400 hover:text-indigo-600">Edit</button>
-            }
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+              Notes
+            </h2>
+            {editingNotes ? (
+              <button
+                onClick={saveNotes}
+                className="text-xs text-indigo-600 hover:underline font-semibold"
+              >
+                Save
+              </button>
+            ) : (
+              <button
+                onClick={() => setEditingNotes(true)}
+                className="text-xs text-gray-400 hover:text-indigo-600"
+              >
+                Edit
+              </button>
+            )}
           </div>
           {editingNotes ? (
             <textarea
               value={notes}
-              onChange={e => setNotes(e.target.value)}
+              onChange={(e) => setNotes(e.target.value)}
               rows={5}
               className="input resize-none text-sm"
               autoFocus
             />
           ) : (
             <p className="text-sm text-gray-700 whitespace-pre-wrap min-h-[2rem]">
-              {snap.notes || <span className="text-gray-400 italic">No notes — click Edit to add some.</span>}
+              {snap.notes || (
+                <span className="text-gray-400 italic">
+                  No notes — click Edit to add some.
+                </span>
+              )}
             </p>
           )}
         </section>
@@ -103,15 +157,22 @@ export default function SnapshotDetailPage() {
               <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 URLs ({snap.urls.length})
               </h2>
-              <button onClick={openAll} className="text-xs text-indigo-600 hover:underline">
+              <button
+                onClick={openAll}
+                className="text-xs text-indigo-600 hover:underline"
+              >
                 Open all ↗
               </button>
             </div>
             <ul className="space-y-1">
               {snap.urls.map((u, i) => (
                 <li key={i}>
-                  <a href={u} target="_blank" rel="noopener noreferrer"
-                    className="text-sm text-indigo-600 hover:underline truncate block">
+                  <a
+                    href={u}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-indigo-600 hover:underline truncate block"
+                  >
                     {u}
                   </a>
                 </li>
@@ -123,12 +184,19 @@ export default function SnapshotDetailPage() {
         {/* ── Files ── */}
         {snap.files?.length > 0 && (
           <section>
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Files</h2>
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              Files
+            </h2>
             <ul className="space-y-1">
               {snap.files.map((f, i) => (
-                <li key={i} className="text-xs font-mono text-gray-700 bg-gray-50 rounded px-2 py-1">
+                <li
+                  key={i}
+                  className="text-xs font-mono text-gray-700 bg-gray-50 rounded px-2 py-1"
+                >
                   {f.path}
-                  <span className="text-gray-400">:{f.line}:{f.col}</span>
+                  <span className="text-gray-400">
+                    :{f.line}:{f.col}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -138,10 +206,17 @@ export default function SnapshotDetailPage() {
         {/* ── Tags ── */}
         {snap.tags?.length > 0 && (
           <section>
-            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Tags</h2>
+            <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              Tags
+            </h2>
             <div className="flex gap-1 flex-wrap">
-              {snap.tags.map(t => (
-                <span key={t} className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">{t}</span>
+              {snap.tags.map((t) => (
+                <span
+                  key={t}
+                  className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full"
+                >
+                  {t}
+                </span>
               ))}
             </div>
           </section>
@@ -154,8 +229,10 @@ export default function SnapshotDetailPage() {
         </div>
 
         {/* ── Danger zone ── */}
-        <button onClick={handleDelete}
-          className="text-sm text-red-400 hover:text-red-600 hover:underline transition">
+        <button
+          onClick={handleDelete}
+          className="text-sm text-red-400 hover:text-red-600 hover:underline transition"
+        >
           Delete snapshot
         </button>
       </div>
