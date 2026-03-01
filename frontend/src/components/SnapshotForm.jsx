@@ -5,40 +5,56 @@
 //   onSave(fields) — called with validated form data
 //   loading    — disables submit button while saving
 
-import { useState } from 'react';
+import { useState } from "react";
 
-const EMPTY = { name: '', notes: '', urlInput: '', urls: [], tags: '' };
+const EMPTY = { name: "", notes: "", urlInput: "", urls: [], tags: "" };
 
-export default function SnapshotForm({ initial = {}, onSave, loading = false }) {
-  const [name,     setName]     = useState(initial.name  ?? '');
-  const [notes,    setNotes]    = useState(initial.notes ?? '');
-  const [urls,     setUrls]     = useState(initial.urls  ?? []);
-  const [urlInput, setUrlInput] = useState('');
-  const [tags,     setTags]     = useState((initial.tags ?? []).join(', '));
-  const [error,    setError]    = useState('');
+export default function SnapshotForm({
+  initial = {},
+  onSave,
+  loading = false,
+}) {
+  const [name, setName] = useState(initial.name ?? "");
+  const [notes, setNotes] = useState(initial.notes ?? "");
+  const [urls, setUrls] = useState(initial.urls ?? []);
+  const [urlInput, setUrlInput] = useState("");
+  const [tags, setTags] = useState((initial.tags ?? []).join(", "));
+  const [error, setError] = useState("");
 
   // ── URL helpers ──────────────────────────────────────────────────────────
   const addUrl = () => {
     const u = urlInput.trim();
     if (!u) return;
-    try { new URL(u); } catch { setError('Enter a valid URL (include https://)'); return; }
-    setUrls(prev => [...prev, u]);
-    setUrlInput('');
-    setError('');
+    try {
+      new URL(u);
+    } catch {
+      setError("Enter a valid URL (include https://)");
+      return;
+    }
+    setUrls((prev) => [...prev, u]);
+    setUrlInput("");
+    setError("");
   };
 
-  const removeUrl = (i) => setUrls(prev => prev.filter((_, idx) => idx !== i));
+  const removeUrl = (i) =>
+    setUrls((prev) => prev.filter((_, idx) => idx !== i));
 
   // ── Submit ───────────────────────────────────────────────────────────────
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!name.trim()) { setError('Task name is required.'); return; }
-    setError('');
+    if (!name.trim()) {
+      setError("Task name is required.");
+      return;
+    }
+    setError("");
     onSave({
-      name:  name.trim(),
+      name: name.trim(),
       notes: notes.trim(),
       urls,
-      tags:  tags.split(',').map(t => t.trim()).filter(Boolean),
+      tags: tags
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean),
     });
   };
 
@@ -58,7 +74,7 @@ export default function SnapshotForm({ initial = {}, onSave, loading = false }) 
         <input
           autoFocus
           value={name}
-          onChange={e => setName(e.target.value)}
+          onChange={(e) => setName(e.target.value)}
           placeholder="What are you working on?"
           className="input text-base"
         />
@@ -66,10 +82,12 @@ export default function SnapshotForm({ initial = {}, onSave, loading = false }) 
 
       {/* Notes */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Notes / next steps</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Notes / next steps
+        </label>
         <textarea
           value={notes}
-          onChange={e => setNotes(e.target.value)}
+          onChange={(e) => setNotes(e.target.value)}
           rows={4}
           placeholder="Where did you leave off? What's the next step?"
           className="input resize-none"
@@ -78,16 +96,27 @@ export default function SnapshotForm({ initial = {}, onSave, loading = false }) 
 
       {/* URLs */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">URLs</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          URLs
+        </label>
         <div className="flex gap-2">
           <input
             value={urlInput}
-            onChange={e => setUrlInput(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addUrl(); } }}
+            onChange={(e) => setUrlInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addUrl();
+              }
+            }}
             placeholder="https://github.com/org/repo/pull/42"
             className="input"
           />
-          <button type="button" onClick={addUrl} className="btn-secondary shrink-0">
+          <button
+            type="button"
+            onClick={addUrl}
+            className="btn-secondary shrink-0"
+          >
             Add
           </button>
         </div>
@@ -118,14 +147,18 @@ export default function SnapshotForm({ initial = {}, onSave, loading = false }) 
         </label>
         <input
           value={tags}
-          onChange={e => setTags(e.target.value)}
+          onChange={(e) => setTags(e.target.value)}
           placeholder="auth, backend, urgent"
           className="input"
         />
       </div>
 
-      <button type="submit" disabled={loading} className="btn-primary w-full py-2.5 text-base">
-        {loading ? 'Saving…' : '💾  Save Snapshot'}
+      <button
+        type="submit"
+        disabled={loading}
+        className="btn-primary w-full py-2.5 text-base"
+      >
+        {loading ? "Saving…" : "💾  Save Snapshot"}
       </button>
     </form>
   );

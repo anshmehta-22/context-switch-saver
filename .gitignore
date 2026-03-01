@@ -21,6 +21,8 @@ logs/
 # SQLite
 *.db
 *.sqlite
+*.db-wal
+*.db-shm
 
 # VSCode
 .vscode/

@@ -1,4 +1,4 @@
-// src/controllers/snapshotsController.js
+// src/services/snapshotsService.js
 // Pure data-access functions — no Express req/res here.
 // Each function is unit-testable in isolation.
 
@@ -16,6 +16,8 @@ const toRow = ({
   urls = [],
   files = [],
   tags = [],
+  created_at,
+  updated_at,
 }) => ({
   id,
   name,
@@ -24,6 +26,8 @@ const toRow = ({
   urls: JSON.stringify(urls),
   files: JSON.stringify(files),
   tags: JSON.stringify(tags),
+  created_at,
+  updated_at,
 });
 
 /** Deserialise a raw SQLite row into a clean JS object. */
@@ -50,12 +54,20 @@ const fromRow = (row) => {
  */
 function createSnapshot(fields) {
   const db = getDb();
-  const row = toRow({ id: uuidv4(), ...fields });
+
+  const now = new Date().toISOString();
+
+  const row = toRow({ 
+    id: uuidv4(), 
+    ...fields,
+    created_at: now,
+    updated_at: now
+  });
 
   db.prepare(
     `
-    INSERT INTO snapshots (id, name, notes, status, urls, files, tags)
-    VALUES (@id, @name, @notes, @status, @urls, @files, @tags)
+    INSERT INTO snapshots (id, name, notes, status, urls, files, tags, created_at, updated_at)
+    VALUES (@id, @name, @notes, @status, @urls, @files, @tags, @created_at, @updated_at)
   `,
   ).run(row);
 
@@ -110,13 +122,15 @@ function updateSnapshot(id, fields) {
 
   if (Object.keys(updates).length === 0) return getSnapshotById(id);
 
+  updates.updated_at = new Date().toISOString();
+
   const setClauses = Object.keys(updates)
     .map((k) => `${k} = @${k}`)
     .join(", ");
   db.prepare(
     `
     UPDATE snapshots
-    SET ${setClauses}, updated_at = datetime('now')
+    SET ${setClauses}, updated_at = @updated_at
     WHERE id = @id
   `,
   ).run({ ...updates, id });
