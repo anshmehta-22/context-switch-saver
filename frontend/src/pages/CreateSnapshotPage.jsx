@@ -31,7 +31,13 @@ export default function CreateSnapshotPage() {
     <div className="relative">
       {/* Silk background */}
       <div className="fixed inset-0 -z-10">
-        <Silk speed={4} scale={1} color="#4B5563" noiseIntensity={1.5} rotation={0} />
+        <Silk
+          speed={4}
+          scale={1}
+          color="#4B5563"
+          noiseIntensity={1.5}
+          rotation={0}
+        />
       </div>
       <div className="fixed inset-0 -z-10 bg-black/30" />
 
@@ -57,7 +63,11 @@ export default function CreateSnapshotPage() {
 
         <div
           className="rounded-2xl p-6 shadow-sm"
-          style={{ background: 'rgba(15,10,30,0.65)', backdropFilter: 'blur(12px)', border: '1px solid rgba(139,92,246,0.25)' }}
+          style={{
+            background: "rgba(15,10,30,0.65)",
+            backdropFilter: "blur(12px)",
+            border: "1px solid rgba(139,92,246,0.25)",
+          }}
         >
           <SnapshotForm onSave={handleSave} loading={loading} />
         </div>

@@ -88,14 +88,24 @@ export default function SnapshotDetailPage() {
     <div className="relative">
       {/* Silk background */}
       <div className="fixed inset-0 -z-10">
-        <Silk speed={4} scale={1} color="#4B5563" noiseIntensity={1.5} rotation={0} />
+        <Silk
+          speed={4}
+          scale={1}
+          color="#4B5563"
+          noiseIntensity={1.5}
+          rotation={0}
+        />
       </div>
       <div className="fixed inset-0 -z-10 bg-black/30" />
 
       <div className="relative z-10 max-w-xl mx-auto">
         <div
           className="rounded-2xl p-6 shadow-sm space-y-6"
-          style={{ background: 'rgba(15,10,30,0.65)', backdropFilter: 'blur(12px)', border: '1px solid rgba(139,92,246,0.25)' }}
+          style={{
+            background: "rgba(15,10,30,0.65)",
+            backdropFilter: "blur(12px)",
+            border: "1px solid rgba(139,92,246,0.25)",
+          }}
         >
           {/* ── Header ── */}
           <div className="flex items-start justify-between gap-4">
@@ -106,7 +116,10 @@ export default function SnapshotDetailPage() {
               value={snap.status}
               onChange={(e) => update({ status: e.target.value })}
               className="text-sm rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-purple-500 shrink-0 text-purple-100"
-              style={{ background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.35)' }}
+              style={{
+                background: "rgba(139,92,246,0.15)",
+                border: "1px solid rgba(139,92,246,0.35)",
+              }}
             >
               {STATUS_OPTIONS.map((s) => (
                 <option key={s} value={s} className="bg-[#1e1b4b]">
@@ -144,7 +157,10 @@ export default function SnapshotDetailPage() {
                 onChange={(e) => setNotes(e.target.value)}
                 rows={5}
                 className="input resize-none text-sm w-full rounded-lg px-3 py-2 text-white placeholder-purple-300/40 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.35)' }}
+                style={{
+                  background: "rgba(139,92,246,0.1)",
+                  border: "1px solid rgba(139,92,246,0.35)",
+                }}
                 autoFocus
               />
             ) : (
@@ -200,7 +216,7 @@ export default function SnapshotDetailPage() {
                   <li
                     key={i}
                     className="text-xs font-mono text-purple-200 rounded px-2 py-1"
-                    style={{ background: 'rgba(139,92,246,0.1)' }}
+                    style={{ background: "rgba(139,92,246,0.1)" }}
                   >
                     {f.path}
                     <span className="text-purple-300/50">
