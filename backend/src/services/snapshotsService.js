@@ -4,6 +4,7 @@
 
 const { v4: uuidv4 } = require("uuid");
 const { getDb } = require("../database/db");
+const { sanitizeFields } = require("../middleware/sanitize");
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -14,8 +15,10 @@ const toRow = ({
   notes = "",
   status = "active",
   urls = [],
+  attachments = [],
   files = [],
   tags = [],
+  pause_time,
   created_at,
   updated_at,
 }) => ({
@@ -24,8 +27,10 @@ const toRow = ({
   notes,
   status,
   urls: JSON.stringify(urls),
+  attachments: JSON.stringify(attachments),
   files: JSON.stringify(files),
   tags: JSON.stringify(tags),
+  pause_time,
   created_at,
   updated_at,
 });
@@ -39,8 +44,10 @@ const fromRow = (row) => {
     notes: row.notes,
     status: row.status,
     urls: JSON.parse(row.urls || "[]"),
+    attachments: JSON.parse(row.attachments || "[]"),
     files: JSON.parse(row.files || "[]"),
     tags: JSON.parse(row.tags || "[]"),
+    pauseTime: row.pause_time,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -54,20 +61,21 @@ const fromRow = (row) => {
  */
 function createSnapshot(fields) {
   const db = getDb();
+  const sanitizedFields = sanitizeFields(fields);
 
   const now = new Date().toISOString();
 
-  const row = toRow({ 
-    id: uuidv4(), 
-    ...fields,
+  const row = toRow({
+    id: uuidv4(),
+    ...sanitizedFields,
     created_at: now,
-    updated_at: now
+    updated_at: now,
   });
 
   db.prepare(
     `
-    INSERT INTO snapshots (id, name, notes, status, urls, files, tags, created_at, updated_at)
-    VALUES (@id, @name, @notes, @status, @urls, @files, @tags, @created_at, @updated_at)
+    INSERT INTO snapshots (id, name, notes, status, urls, attachments, files, tags, pause_time, created_at, updated_at)
+    VALUES (@id, @name, @notes, @status, @urls, @attachments, @files, @tags, @pause_time, @created_at, @updated_at)
   `,
   ).run(row);
 
@@ -77,19 +85,64 @@ function createSnapshot(fields) {
 }
 
 /**
- * Return all snapshots, optionally filtered by status.
- * @param {string|undefined} status  'active' | 'paused' | 'complete'
+ * Return all snapshots, optionally filtered by status, search, and tag.
+ * @param {{ status?, search?, tag? }} filters
  */
-function getSnapshots(status) {
+function getSnapshots({ status, search, tag, page = 1, limit = 5 } = {}) {
   const db = getDb();
-  const rows = status
-    ? db
-        .prepare(
-          "SELECT * FROM snapshots WHERE status = ? ORDER BY created_at DESC",
-        )
-        .all(status)
-    : db.prepare("SELECT * FROM snapshots ORDER BY created_at DESC").all();
-  return rows.map(fromRow);
+
+  const conditions = [];
+  const params = [];
+
+  if (status) {
+    conditions.push("status = ?");
+    params.push(status);
+  }
+
+  if (search) {
+    conditions.push(
+      "(name LIKE ? OR notes LIKE ? OR EXISTS (SELECT 1 FROM json_each(tags) WHERE value LIKE ?))",
+    );
+    params.push(`%${search}%`);
+    params.push(`%${search}%`);
+    params.push(`%${search}%`);
+  }
+
+  if (tag) {
+    conditions.push(
+      "EXISTS (SELECT 1 FROM json_each(tags) WHERE value LIKE ?)",
+    );
+    params.push(`%${tag}%`);
+  }
+
+  const whereClause =
+    conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  // COUNT total matching rows
+  const { count: total } = db
+    .prepare(`SELECT COUNT(*) as count FROM snapshots ${whereClause}`)
+    .get(...params);
+
+  const totalPages = Math.ceil(total / limit);
+  const offset = (page - 1) * limit;
+
+  const rows = db
+    .prepare(
+      `SELECT * FROM snapshots ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    )
+    .all(...params, limit, offset);
+
+  return {
+    data: rows.map(fromRow),
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrev: page > 1,
+    },
+  };
 }
 
 /**
@@ -105,18 +158,36 @@ function getSnapshotById(id) {
 /**
  * Update allowed fields on a snapshot.
  * @param {string} id
- * @param {{ name?, notes?, status?, urls?, files?, tags? }} fields
+ * @param {{ name?, notes?, status?, urls?, attachments?, files?, tags? }} fields
  */
 function updateSnapshot(id, fields) {
   const db = getDb();
-  const ALLOWED = ["name", "notes", "status", "urls", "files", "tags"];
+  const sanitizedFields = sanitizeFields(fields);
+  const ALLOWED = [
+    "name",
+    "notes",
+    "status",
+    "urls",
+    "attachments",
+    "files",
+    "tags",
+  ];
   const updates = {};
 
   for (const key of ALLOWED) {
-    if (fields[key] !== undefined) {
-      updates[key] = Array.isArray(fields[key])
-        ? JSON.stringify(fields[key])
-        : fields[key];
+    if (sanitizedFields[key] !== undefined) {
+      updates[key] = Array.isArray(sanitizedFields[key])
+        ? JSON.stringify(sanitizedFields[key])
+        : sanitizedFields[key];
+    }
+  }
+
+  // Handle pause_time: set when pausing, clear when resuming/completing
+  if (sanitizedFields.status !== undefined) {
+    if (sanitizedFields.status === "paused") {
+      updates.pause_time = new Date().toISOString();
+    } else {
+      updates.pause_time = null;
     }
   }
 
