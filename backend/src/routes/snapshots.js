@@ -3,6 +3,7 @@
 const express = require("express");
 const router = express.Router();
 
+const { authenticate } = require("../middleware/authenticate");
 const asyncHandler = require("../utils/asyncHandler");
 const { validate } = require("../middleware/validate");
 const { writeLimiter } = require("../middleware/rateLimiter");
@@ -18,6 +19,8 @@ const {
   updateSnapshot,
   deleteSnapshot,
 } = require("../controllers/snapshotsController");
+
+router.use(authenticate);
 
 router.get(
   "/",

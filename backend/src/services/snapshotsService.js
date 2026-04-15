@@ -11,6 +11,7 @@ const { sanitizeFields } = require("../middleware/sanitize");
 /** Serialise array fields to JSON strings for SQLite storage. */
 const toRow = ({
   id,
+  user_id,
   name,
   notes = "",
   status = "active",
@@ -23,6 +24,7 @@ const toRow = ({
   updated_at,
 }) => ({
   id,
+  user_id,
   name,
   notes,
   status,
@@ -40,6 +42,7 @@ const fromRow = (row) => {
   if (!row) return null;
   return {
     id: row.id,
+    userId: row.user_id,
     name: row.name,
     notes: row.notes,
     status: row.status,
@@ -57,7 +60,7 @@ const fromRow = (row) => {
 
 /**
  * Create a new snapshot.
- * @param {{ name, notes?, urls?, files?, tags? }} fields
+ * @param {{ userId, name, notes?, urls?, files?, tags? }} fields
  */
 function createSnapshot(fields) {
   const db = getDb();
@@ -67,6 +70,7 @@ function createSnapshot(fields) {
 
   const row = toRow({
     id: uuidv4(),
+    user_id: sanitizedFields.userId,
     ...sanitizedFields,
     created_at: now,
     updated_at: now,
@@ -74,8 +78,8 @@ function createSnapshot(fields) {
 
   db.prepare(
     `
-    INSERT INTO snapshots (id, name, notes, status, urls, attachments, files, tags, pause_time, created_at, updated_at)
-    VALUES (@id, @name, @notes, @status, @urls, @attachments, @files, @tags, @pause_time, @created_at, @updated_at)
+    INSERT INTO snapshots (id, user_id, name, notes, status, urls, attachments, files, tags, pause_time, created_at, updated_at)
+    VALUES (@id, @user_id, @name, @notes, @status, @urls, @attachments, @files, @tags, @pause_time, @created_at, @updated_at)
   `,
   ).run(row);
 
@@ -86,13 +90,20 @@ function createSnapshot(fields) {
 
 /**
  * Return all snapshots, optionally filtered by status, search, and tag.
- * @param {{ status?, search?, tag? }} filters
+ * @param {{ userId, status?, search?, tag? }} filters
  */
-function getSnapshots({ status, search, tag, page = 1, limit = 5 } = {}) {
+function getSnapshots({
+  userId,
+  status,
+  search,
+  tag,
+  page = 1,
+  limit = 5,
+} = {}) {
   const db = getDb();
 
-  const conditions = [];
-  const params = [];
+  const conditions = ["user_id = ?"];
+  const params = [userId];
 
   if (status) {
     conditions.push("status = ?");
@@ -148,10 +159,13 @@ function getSnapshots({ status, search, tag, page = 1, limit = 5 } = {}) {
 /**
  * Return a single snapshot by ID, or null if not found.
  * @param {string} id
+ * @param {string} userId
  */
-function getSnapshotById(id) {
+function getSnapshotById(id, userId) {
   return fromRow(
-    getDb().prepare("SELECT * FROM snapshots WHERE id = ?").get(id),
+    getDb()
+      .prepare("SELECT * FROM snapshots WHERE id = ? AND user_id = ?")
+      .get(id, userId),
   );
 }
 
@@ -159,8 +173,9 @@ function getSnapshotById(id) {
  * Update allowed fields on a snapshot.
  * @param {string} id
  * @param {{ name?, notes?, status?, urls?, attachments?, files?, tags? }} fields
+ * @param {string} userId
  */
-function updateSnapshot(id, fields) {
+function updateSnapshot(id, fields, userId) {
   const db = getDb();
   const sanitizedFields = sanitizeFields(fields);
   const ALLOWED = [
@@ -191,7 +206,7 @@ function updateSnapshot(id, fields) {
     }
   }
 
-  if (Object.keys(updates).length === 0) return getSnapshotById(id);
+  if (Object.keys(updates).length === 0) return getSnapshotById(id, userId);
 
   updates.updated_at = new Date().toISOString();
 
@@ -202,19 +217,22 @@ function updateSnapshot(id, fields) {
     `
     UPDATE snapshots
     SET ${setClauses}, updated_at = @updated_at
-    WHERE id = @id
+    WHERE id = @id AND user_id = @user_id
   `,
-  ).run({ ...updates, id });
+  ).run({ ...updates, id, user_id: userId });
 
-  return getSnapshotById(id);
+  return getSnapshotById(id, userId);
 }
 
 /**
  * Delete a snapshot. Returns true if a row was deleted.
  * @param {string} id
+ * @param {string} userId
  */
-function deleteSnapshot(id) {
-  const info = getDb().prepare("DELETE FROM snapshots WHERE id = ?").run(id);
+function deleteSnapshot(id, userId) {
+  const info = getDb()
+    .prepare("DELETE FROM snapshots WHERE id = ? AND user_id = ?")
+    .run(id, userId);
   return info.changes > 0;
 }
 

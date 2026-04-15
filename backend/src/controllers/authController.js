@@ -4,7 +4,7 @@ const authService = require("../services/authService");
 function getTokenOptions() {
   return {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
     secure: process.env.NODE_ENV === "production",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   };
@@ -53,7 +53,7 @@ async function login(req, res) {
 function logout(req, res) {
   res.clearCookie("token", {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
     secure: process.env.NODE_ENV === "production",
   });
   return res.status(200).json({ data: { message: "Logged out" } });

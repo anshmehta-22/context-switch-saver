@@ -5,13 +5,17 @@ const snapshotService = require("../services/snapshotsService");
 
 function createSnapshot(req, res) {
   // req.body is already validated + defaults applied by middleware
-  const snapshot = snapshotService.createSnapshot(req.body);
+  const snapshot = snapshotService.createSnapshot({
+    userId: req.user.id,
+    ...req.body,
+  });
   res.status(201).json({ data: snapshot });
 }
 
 function getSnapshots(req, res) {
   const { status, search, tag, page, limit } = req.query;
   const result = snapshotService.getSnapshots({
+    userId: req.user.id,
     status,
     search,
     tag,
@@ -22,7 +26,7 @@ function getSnapshots(req, res) {
 }
 
 function getSnapshotById(req, res) {
-  const snapshot = snapshotService.getSnapshotById(req.params.id);
+  const snapshot = snapshotService.getSnapshotById(req.params.id, req.user.id);
   if (!snapshot) {
     return res.status(404).json({ error: "Not found" });
   }
@@ -30,7 +34,11 @@ function getSnapshotById(req, res) {
 }
 
 function updateSnapshot(req, res) {
-  const updated = snapshotService.updateSnapshot(req.params.id, req.body);
+  const updated = snapshotService.updateSnapshot(
+    req.params.id,
+    req.body,
+    req.user.id,
+  );
   if (!updated) {
     return res.status(404).json({ error: "Not found" });
   }
@@ -38,7 +46,7 @@ function updateSnapshot(req, res) {
 }
 
 function deleteSnapshot(req, res) {
-  const deleted = snapshotService.deleteSnapshot(req.params.id);
+  const deleted = snapshotService.deleteSnapshot(req.params.id, req.user.id);
   if (!deleted) {
     return res.status(404).json({ error: "Not found" });
   }

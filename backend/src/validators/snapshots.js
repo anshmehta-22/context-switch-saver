@@ -14,12 +14,30 @@ const tagItem = z
   .min(1, "Tags cannot be empty strings")
   .max(50, "Each tag must be 50 characters or fewer");
 
+const ALLOWED_MIME_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/svg+xml",
+];
+
 const attachmentItem = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
-  mimeType: z.string().startsWith("image/", "Attachments must be images"),
+  mimeType: z.enum(ALLOWED_MIME_TYPES, {
+    errorMap: () => ({
+      message: `Attachment must be one of: ${ALLOWED_MIME_TYPES.join(", ")}`,
+    }),
+  }),
   size: z.number().max(2 * 1024 * 1024, "Each attachment must be under 2MB"),
-  dataUrl: z.string().min(1),
+  dataUrl: z
+    .string()
+    .min(1)
+    .refine(
+      (val) => ALLOWED_MIME_TYPES.some((t) => val.startsWith(`data:${t}`)),
+      { message: "dataUrl must be a valid base64-encoded image" },
+    ),
 });
 
 const fileItem = z.object({

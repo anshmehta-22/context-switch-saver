@@ -1,14 +1,44 @@
 // src/components/SnapshotCard.jsx
 // Card shown in the list view — name, status badge, tags, timestamps, actions.
 
+import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import StatusBadge from "./StatusBadge";
 import LightRays from "./LightRays";
+import ReminderPicker from "./ReminderPicker";
 
 export default function SnapshotCard({ snapshot, onReload, onStatusChange }) {
   const navigate = useNavigate();
-  const { id, name, status, tags = [], urls = [], createdAt } = snapshot;
+  const [showReminderPicker, setShowReminderPicker] = useState(false);
+
+  const {
+    id,
+    name,
+    status,
+    tags = [],
+    urls = [],
+    attachments = [],
+    createdAt,
+  } = snapshot;
+
+  const handlePauseResume = async () => {
+    const newStatus = status === "active" ? "paused" : "active";
+    await onStatusChange(id, newStatus);
+
+    // Show reminder picker only when pausing
+    if (newStatus === "paused") {
+      setShowReminderPicker(true);
+    }
+  };
+
+  const handleReminderConfirm = () => {
+    setShowReminderPicker(false);
+  };
+
+  const handleReminderDismiss = () => {
+    setShowReminderPicker(false);
+  };
 
   return (
     <article
@@ -53,6 +83,8 @@ export default function SnapshotCard({ snapshot, onReload, onStatusChange }) {
 
           <p className="text-xs text-purple-300/60 mt-0.5">
             {urls.length} URL{urls.length !== 1 ? "s" : ""}
+            {" • "}
+            {attachments.length} screenshot{attachments.length !== 1 ? "s" : ""}
           </p>
 
           {tags.length > 0 && (
@@ -86,15 +118,25 @@ export default function SnapshotCard({ snapshot, onReload, onStatusChange }) {
           {status !== "complete" && (
             <button
               className="text-xs text-purple-300/50 hover:text-purple-200 transition"
-              onClick={() =>
-                onStatusChange(id, status === "active" ? "paused" : "active")
-              }
+              onClick={handlePauseResume}
             >
               {status === "active" ? "⏸ Pause" : "▶ Resume"}
             </button>
           )}
         </div>
       </div>
+
+      {/* Reminder picker shown after pause */}
+      {showReminderPicker && (
+        <div className="relative z-10">
+          <ReminderPicker
+            snapshotId={id}
+            snapshotName={name}
+            onConfirm={handleReminderConfirm}
+            onDismiss={handleReminderDismiss}
+          />
+        </div>
+      )}
     </article>
   );
 }

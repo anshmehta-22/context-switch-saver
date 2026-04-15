@@ -2,7 +2,7 @@
 // Wraps SnapshotForm and handles the POST to the API.
 
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import SnapshotForm from "../components/SnapshotForm";
 import Silk from "../components/Silk";
 import * as api from "../api";
@@ -12,6 +12,7 @@ export default function CreateSnapshotPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { state } = useLocation();
 
   const handleSave = async (fields) => {
     try {
@@ -69,7 +70,11 @@ export default function CreateSnapshotPage() {
             border: "1px solid rgba(139,92,246,0.25)",
           }}
         >
-          <SnapshotForm onSave={handleSave} loading={loading} />
+          <SnapshotForm
+            initial={state ?? {}}
+            onSave={handleSave}
+            loading={loading}
+          />
         </div>
       </div>
     </div>

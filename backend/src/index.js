@@ -40,7 +40,10 @@ app.use(
 app.use(logger);
 app.use(express.json({ limit: "12mb" }));
 app.use(cookieParser());
-app.use(globalLimiter);
+app.use((req, res, next) => {
+  if (req.path === '/api/auth/me') return next();
+  return globalLimiter(req, res, next);
+});
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use("/api/auth", authRoutes);
@@ -62,4 +65,20 @@ app.use((err, _req, res, _next) => {
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 initDb();
-app.listen(PORT, () => console.log(`[server] http://localhost:${PORT}`));
+const server = app.listen(PORT);
+
+server.on("listening", () => {
+  console.log(`[server] http://localhost:${PORT}`);
+});
+
+server.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    console.error(
+      `[server] Port ${PORT} is already in use. Stop the existing process or start with a different PORT.`,
+    );
+    process.exit(1);
+  }
+
+  console.error("[server] Failed to start", err);
+  process.exit(1);
+});

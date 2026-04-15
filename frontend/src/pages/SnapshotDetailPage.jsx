@@ -205,6 +205,39 @@ export default function SnapshotDetailPage() {
             </section>
           )}
 
+          {/* ── Screenshots ── */}
+          {snap.attachments?.length > 0 && (
+            <section>
+              <h2 className="text-xs font-semibold text-purple-300/60 uppercase tracking-wider mb-2">
+                Screenshots ({snap.attachments.length})
+              </h2>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {snap.attachments.map((a, i) => (
+                  <li
+                    key={a.id || `${a.name}-${i}`}
+                    className="rounded-lg overflow-hidden border border-purple-500/30 bg-purple-500/5"
+                  >
+                    <a
+                      href={a.dataUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <img
+                        src={a.dataUrl}
+                        alt={a.name || `Screenshot ${i + 1}`}
+                        className="w-full h-36 object-cover"
+                      />
+                    </a>
+                    <div className="px-2 py-1.5 text-xs text-purple-200 truncate">
+                      {a.name || `Screenshot ${i + 1}`}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {/* ── Files ── */}
           {snap.files?.length > 0 && (
             <section>

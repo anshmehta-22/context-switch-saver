@@ -1,16 +1,32 @@
 // vite.config.js
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
     proxy: {
-      // Proxy /api/* to the Express backend so we avoid CORS issues in dev
-      '/api': {
-        target: 'http://localhost:3001',
+      "/api": {
+        target: "http://localhost:3001",
         changeOrigin: true,
+      },
+    },
+  },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          "react-vendor": ["react", "react-dom", "react-router-dom"],
+          "three-vendor": ["three"],
+          "motion-vendor": ["framer-motion", "gsap"],
+          "ui-vendor": [
+            "date-fns",
+            "react-hot-toast",
+            "react-loading-skeleton",
+          ],
+        },
       },
     },
   },

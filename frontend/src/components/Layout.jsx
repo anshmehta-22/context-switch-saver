@@ -3,9 +3,12 @@
 
 import { Link, useLocation } from "react-router-dom";
 import Shuffle from "./Shuffle";
+import ReminderToast from "./ReminderToast";
+import { useAuth } from "../context/AuthContext";
 
 export default function Layout({ children }) {
   const { pathname } = useLocation();
+  const { user, logout } = useAuth();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -28,18 +31,38 @@ export default function Layout({ children }) {
             />
           </Link>
 
-          {pathname !== "/new" && (
-            <Link to="/new" className="btn-primary">
-              + New Snapshot
-            </Link>
-          )}
+          <div className="flex items-center gap-4">
+            {user && (
+              <span className="text-white/40 text-sm hidden sm:block">
+                {user.email}
+              </span>
+            )}
+
+            {user && (
+              <button
+                onClick={async () => {
+                  await logout();
+                }}
+                className="text-white/40 hover:text-white/70 text-sm transition"
+              >
+                Sign out
+              </button>
+            )}
+
+            {pathname !== "/new" && (
+              <Link to="/new" className="btn-primary">
+                + New Snapshot
+              </Link>
+            )}
+          </div>
         </div>
       </header>
 
       {/* ── Page content ── */}
-      <main className="flex-1 max-w-3xl mx-auto w-full px-4 py-8">
-        {children}
-      </main>
+      <main className="flex-1 w-full px-0 py-8">{children}</main>
+
+      {/* ── Reminder notifications ── */}
+      <ReminderToast />
     </div>
   );
 }
