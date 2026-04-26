@@ -212,7 +212,7 @@ export default function SnapshotListPage() {
             flexDirection: "column",
             justifyContent: "space-between",
             paddingRight: "1.25rem",
-            paddingTop: "3.5rem",
+            paddingTop: "3rem",
             paddingBottom: "1.5rem",
             position: "sticky",
             top: 0,
