@@ -149,4 +149,8 @@ async function initDb() {
   console.log(`[db] Connected → ${dbPath}`);
 }
 
-module.exports = { getDb, initDb };
+function isUsingTurso() {
+  return _mode === "turso";
+}
+
+module.exports = { getDb, initDb, isUsingTurso };

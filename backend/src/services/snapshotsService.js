@@ -3,8 +3,35 @@
 // Each function is unit-testable in isolation.
 
 const { v4: uuidv4 } = require("uuid");
-const { getDb } = require("../database/db");
+const { getDb, isUsingTurso } = require("../database/db");
 const { sanitizeFields } = require("../middleware/sanitize");
+
+async function queryAll(db, sql, args = []) {
+  if (isUsingTurso()) {
+    const result = await db.execute({ sql, args });
+    return result.rows;
+  }
+
+  return db.prepare(sql).all(...args);
+}
+
+async function queryOne(db, sql, args = []) {
+  if (isUsingTurso()) {
+    const result = await db.execute({ sql, args });
+    return result.rows[0] ?? null;
+  }
+
+  return db.prepare(sql).get(...args);
+}
+
+async function executeWrite(db, sql, args = []) {
+  if (isUsingTurso()) {
+    const result = await db.execute({ sql, args });
+    return { changes: result.rowsAffected ?? 0 };
+  }
+
+  return db.prepare(sql).run(...args);
+}
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -19,7 +46,7 @@ const toRow = ({
   attachments = [],
   files = [],
   tags = [],
-  pause_time,
+  pause_time = null,
   created_at,
   updated_at,
 }) => ({
@@ -62,7 +89,7 @@ const fromRow = (row) => {
  * Create a new snapshot.
  * @param {{ userId, name, notes?, urls?, files?, tags? }} fields
  */
-function createSnapshot(fields) {
+async function createSnapshot(fields) {
   const db = getDb();
   const sanitizedFields = sanitizeFields(fields);
 
@@ -76,15 +103,30 @@ function createSnapshot(fields) {
     updated_at: now,
   });
 
-  db.prepare(
+  await executeWrite(
+    db,
     `
     INSERT INTO snapshots (id, user_id, name, notes, status, urls, attachments, files, tags, pause_time, created_at, updated_at)
-    VALUES (@id, @user_id, @name, @notes, @status, @urls, @attachments, @files, @tags, @pause_time, @created_at, @updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `,
-  ).run(row);
+    [
+      row.id,
+      row.user_id,
+      row.name,
+      row.notes,
+      row.status,
+      row.urls,
+      row.attachments,
+      row.files,
+      row.tags,
+      row.pause_time,
+      row.created_at,
+      row.updated_at,
+    ],
+  );
 
   return fromRow(
-    db.prepare("SELECT * FROM snapshots WHERE id = ?").get(row.id),
+    await queryOne(db, "SELECT * FROM snapshots WHERE id = ?", [row.id]),
   );
 }
 
@@ -92,7 +134,7 @@ function createSnapshot(fields) {
  * Return all snapshots, optionally filtered by status, search, and tag.
  * @param {{ userId, status?, search?, tag? }} filters
  */
-function getSnapshots({
+async function getSnapshots({
   userId,
   status,
   search,
@@ -130,18 +172,21 @@ function getSnapshots({
     conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
   // COUNT total matching rows
-  const { count: total } = db
-    .prepare(`SELECT COUNT(*) as count FROM snapshots ${whereClause}`)
-    .get(...params);
+  const countRow = await queryOne(
+    db,
+    `SELECT COUNT(*) as count FROM snapshots ${whereClause}`,
+    params,
+  );
+  const total = Number(countRow?.count ?? 0);
 
   const totalPages = Math.ceil(total / limit);
   const offset = (page - 1) * limit;
 
-  const rows = db
-    .prepare(
-      `SELECT * FROM snapshots ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-    )
-    .all(...params, limit, offset);
+  const rows = await queryAll(
+    db,
+    `SELECT * FROM snapshots ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    [...params, limit, offset],
+  );
 
   return {
     data: rows.map(fromRow),
@@ -161,11 +206,13 @@ function getSnapshots({
  * @param {string} id
  * @param {string} userId
  */
-function getSnapshotById(id, userId) {
+async function getSnapshotById(id, userId) {
+  const db = getDb();
   return fromRow(
-    getDb()
-      .prepare("SELECT * FROM snapshots WHERE id = ? AND user_id = ?")
-      .get(id, userId),
+    await queryOne(db, "SELECT * FROM snapshots WHERE id = ? AND user_id = ?", [
+      id,
+      userId,
+    ]),
   );
 }
 
@@ -175,7 +222,7 @@ function getSnapshotById(id, userId) {
  * @param {{ name?, notes?, status?, urls?, attachments?, files?, tags? }} fields
  * @param {string} userId
  */
-function updateSnapshot(id, fields, userId) {
+async function updateSnapshot(id, fields, userId) {
   const db = getDb();
   const sanitizedFields = sanitizeFields(fields);
   const ALLOWED = [
@@ -211,15 +258,19 @@ function updateSnapshot(id, fields, userId) {
   updates.updated_at = new Date().toISOString();
 
   const setClauses = Object.keys(updates)
-    .map((k) => `${k} = @${k}`)
+    .map((k) => `${k} = ?`)
     .join(", ");
-  db.prepare(
+  const values = Object.keys(updates).map((k) => updates[k]);
+
+  await executeWrite(
+    db,
     `
     UPDATE snapshots
-    SET ${setClauses}, updated_at = @updated_at
-    WHERE id = @id AND user_id = @user_id
+    SET ${setClauses}
+    WHERE id = ? AND user_id = ?
   `,
-  ).run({ ...updates, id, user_id: userId });
+    [...values, id, userId],
+  );
 
   return getSnapshotById(id, userId);
 }
@@ -229,10 +280,12 @@ function updateSnapshot(id, fields, userId) {
  * @param {string} id
  * @param {string} userId
  */
-function deleteSnapshot(id, userId) {
-  const info = getDb()
-    .prepare("DELETE FROM snapshots WHERE id = ? AND user_id = ?")
-    .run(id, userId);
+async function deleteSnapshot(id, userId) {
+  const info = await executeWrite(
+    getDb(),
+    "DELETE FROM snapshots WHERE id = ? AND user_id = ?",
+    [id, userId],
+  );
   return info.changes > 0;
 }
 
