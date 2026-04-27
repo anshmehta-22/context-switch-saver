@@ -5,14 +5,19 @@ const BASE = import.meta.env.VITE_API_BASE ?? "/api";
 
 async function request(path, options = {}) {
   let res;
+  const hasBody = options.body !== undefined;
+
+  const headers = {
+    Accept: "application/json",
+    ...(hasBody ? { "Content-Type": "application/json" } : {}),
+    ...(options.headers || {}),
+  };
 
   try {
     res = await fetch(`${BASE}${path}`, {
       credentials: "include",
-      headers: { 
-        "Content-Type": "application/json",
-        "Cache-Control": "no-cache",
-      },
+      cache: "no-store",
+      headers,
       ...options,
     });
   } catch (_err) {
@@ -61,7 +66,20 @@ export const getSnapshots = ({ status, search, tag, page } = {}) => {
   if (tag) params.append("tag", tag);
   if (page) params.append("page", page);
   const qs = params.toString();
-  return request(qs ? `/snapshots?${qs}` : "/snapshots");
+  return request(qs ? `/snapshots?${qs}` : "/snapshots").then((json) => {
+    if (Array.isArray(json)) {
+      return { data: json, pagination: null };
+    }
+
+    if (Array.isArray(json?.data)) {
+      return {
+        data: json.data,
+        pagination: json.pagination ?? null,
+      };
+    }
+
+    return { data: [], pagination: null };
+  });
 };
 
 export const getSnapshot = (id) =>

@@ -1,6 +1,6 @@
 // src/pages/SnapshotListPage.jsx
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import SnapshotCard from "../components/SnapshotCard";
 import ChatPanel from "../components/ChatPanel";
 import SearchFilterPanel from "../components/SearchFilterPanel";
@@ -22,6 +22,7 @@ export default function SnapshotListPage() {
   const [pagination, setPagination] = useState(null);
   const hasLoadedRef = useRef(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
@@ -46,7 +47,7 @@ export default function SnapshotListPage() {
         search: debouncedSearch.trim() || undefined,
         page,
       });
-      setSnapshots(result.data ?? []);
+      setSnapshots(result.data);
       setPagination(result.pagination ?? null);
       setError("");
       hasLoadedRef.current = true;
@@ -60,6 +61,61 @@ export default function SnapshotListPage() {
   useEffect(() => {
     fetchSnapshots();
   }, [fetchSnapshots]);
+
+  const applyCreatedSnapshot = useCallback(
+    (created) => {
+      if (!created?.id) {
+        fetchSnapshots();
+        return;
+      }
+
+      const matchesFilter = filter === "all" || created.status === filter;
+      const searchTerm = debouncedSearch.trim().toLowerCase();
+      const searchable = `${created.name ?? ""} ${created.notes ?? ""} ${(created.tags ?? []).join(" ")}`.toLowerCase();
+      const matchesSearch = !searchTerm || searchable.includes(searchTerm);
+
+      if (!matchesFilter || !matchesSearch || page !== 1) {
+        fetchSnapshots();
+        return;
+      }
+
+      setSnapshots((prev) => {
+        if (prev.some((s) => s.id === created.id)) return prev;
+        return [created, ...prev];
+      });
+
+      setPagination((prev) => {
+        if (!prev) return prev;
+
+        const total = prev.total + 1;
+        const totalPages = Math.max(1, Math.ceil(total / prev.limit));
+
+        return {
+          ...prev,
+          total,
+          totalPages,
+          hasNext: prev.page < totalPages,
+          hasPrev: prev.page > 1,
+        };
+      });
+    },
+    [debouncedSearch, fetchSnapshots, filter, page],
+  );
+
+  useEffect(() => {
+    const created = location.state?.createdSnapshot;
+    if (!created) return;
+
+    applyCreatedSnapshot(created);
+    navigate(".", { replace: true, state: null });
+  }, [applyCreatedSnapshot, location.state, navigate]);
+
+  const handleSnapshotCreated = useCallback(
+    (created) => {
+      applyCreatedSnapshot(created);
+    },
+    [applyCreatedSnapshot],
+  );
 
   const handleReload = (snap) => {
     snap.urls?.forEach((u) => window.open(u, "_blank", "noopener"));
@@ -212,7 +268,7 @@ export default function SnapshotListPage() {
             flexDirection: "column",
             justifyContent: "space-between",
             paddingRight: "1.25rem",
-            paddingTop: "3rem",
+            paddingTop: "3.5rem",
             paddingBottom: "1.5rem",
             position: "sticky",
             top: 0,
@@ -224,7 +280,7 @@ export default function SnapshotListPage() {
             style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
           >
             <SearchFilterPanel search={search} setSearch={handleSearchChange} />
-            <ChatPanel onSnapshotCreated={fetchSnapshots} />
+            <ChatPanel onSnapshotCreated={handleSnapshotCreated} />
           </div>
 
           {/* Bottom — pagination pinned */}

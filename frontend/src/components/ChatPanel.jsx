@@ -239,9 +239,9 @@ export default function ChatPanel({ onSnapshotCreated }) {
     setError("");
     setIsSaving(true);
     try {
-      await createSnapshot(parsedData);
+      const created = await createSnapshot(parsedData);
       setState("success");
-      if (onSnapshotCreated) onSnapshotCreated();
+      if (onSnapshotCreated) onSnapshotCreated(created);
     } catch (err) {
       setError(err.message || "Failed to save snapshot");
       setIsSaving(false);

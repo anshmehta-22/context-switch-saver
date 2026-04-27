@@ -18,9 +18,9 @@ export default function CreateSnapshotPage() {
     try {
       setLoading(true);
       setError("");
-      await api.createSnapshot(fields);
+      const created = await api.createSnapshot(fields);
       toast.success("Snapshot saved !");
-      navigate("/");
+      navigate("/", { state: { createdSnapshot: created } });
     } catch (err) {
       toast.error(err.message || "Something went wrong");
     } finally {
