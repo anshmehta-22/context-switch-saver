@@ -71,7 +71,8 @@ export default function SnapshotListPage() {
 
       const matchesFilter = filter === "all" || created.status === filter;
       const searchTerm = debouncedSearch.trim().toLowerCase();
-      const searchable = `${created.name ?? ""} ${created.notes ?? ""} ${(created.tags ?? []).join(" ")}`.toLowerCase();
+      const searchable =
+        `${created.name ?? ""} ${created.notes ?? ""} ${(created.tags ?? []).join(" ")}`.toLowerCase();
       const matchesSearch = !searchTerm || searchable.includes(searchTerm);
 
       if (!matchesFilter || !matchesSearch || page !== 1) {
@@ -134,8 +135,9 @@ export default function SnapshotListPage() {
   return (
     <div
       style={{
-        height: "calc(100vh - 93px)",
-        overflow: "hidden",
+        minHeight: "calc(100dvh - 93px)",
+        overflowX: "hidden",
+        overflowY: "visible",
         position: "relative",
       }}
     >
@@ -155,7 +157,7 @@ export default function SnapshotListPage() {
       <div
         style={{
           display: "flex",
-          height: "100%",
+          minHeight: "inherit",
           position: "relative",
           zIndex: 10,
         }}
@@ -171,6 +173,7 @@ export default function SnapshotListPage() {
             padding: "0 1rem",
             display: "flex",
             flexDirection: "column",
+            minHeight: 0,
           }}
         >
           {/* Filter tabs */}
@@ -195,10 +198,12 @@ export default function SnapshotListPage() {
           <div
             style={{
               flex: 1,
-              overflow: "hidden",
+              overflowY: "visible",
+              overflowX: "hidden",
               maxWidth: "42rem",
               margin: "0 auto",
               width: "100%",
+              minHeight: 0,
             }}
           >
             {loading && (
@@ -269,15 +274,23 @@ export default function SnapshotListPage() {
             justifyContent: "space-between",
             paddingRight: "1.25rem",
             paddingTop: "3.5rem",
-            paddingBottom: "1.5rem",
+            paddingBottom: "5.5rem",
             position: "sticky",
-            top: 0,
-            height: "100%",
+            top: "1rem",
+            alignSelf: "flex-start",
+            height: "calc(100dvh - 2rem)",
           }}
         >
           {/* Top — search + chat panels */}
           <div
-            style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "1rem",
+              minHeight: 0,
+              overflowY: "auto",
+              paddingRight: "0.25rem",
+            }}
           >
             <SearchFilterPanel search={search} setSearch={handleSearchChange} />
             <ChatPanel onSnapshotCreated={handleSnapshotCreated} />

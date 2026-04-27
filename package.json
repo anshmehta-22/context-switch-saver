@@ -1,4 +1,10 @@
 {
+  "scripts": {
+    "dev": "npm run dev:backend & npm run dev:frontend",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "start": "npm --prefix backend run start"
+  },
   "dependencies": {
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",

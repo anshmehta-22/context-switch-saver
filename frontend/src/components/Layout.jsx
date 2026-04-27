@@ -57,6 +57,22 @@ export default function Layout({ children }) {
               triggerOnce={false}
               loop={false}
             />
+            <span
+              style={{
+                fontSize: "0.65rem",
+                fontWeight: 600,
+                letterSpacing: "0.05em",
+                padding: "2px 6px",
+                borderRadius: "4px",
+                background: "rgba(139,92,246,0.25)",
+                border: "1px solid rgba(139,92,246,0.4)",
+                color: "rgba(196,181,253,0.9)",
+                verticalAlign: "middle",
+                marginLeft: "8px",
+              }}
+            >
+              BETA
+            </span>
           </Link>
 
           {pathname !== "/new" && (
@@ -120,7 +136,9 @@ export default function Layout({ children }) {
       </header>
 
       {/* ── Page content ── */}
-      <main className="flex-1 w-full px-0 py-8">{children}</main>
+      <main className="flex-1 w-full px-0 py-8 overflow-x-hidden">
+        {children}
+      </main>
 
       {/* ── Reminder notifications ── */}
       <ReminderToast />

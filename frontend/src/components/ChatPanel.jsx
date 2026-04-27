@@ -292,7 +292,6 @@ export default function ChatPanel({ onSnapshotCreated }) {
         {/* ── STATE 1: idle ── */}
         {state === "idle" && (
           <>
-
             <textarea
               id="chat-input"
               value={input}
