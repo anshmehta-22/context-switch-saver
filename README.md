@@ -21,6 +21,14 @@ Context Switch Saver helps developers save their working state (tabs, notes, tas
 
 ## 📦 Setup
 
+### Environment variables
+
+The backend parser uses Google Gemini. Set this in local and production environments:
+
+- `GEMINI_API_KEY`: required for high-quality title/notes/tags extraction from one freeform input
+
+If `GEMINI_API_KEY` is missing, the app falls back to heuristic parsing (works, but tag quality is lower).
+
 ### 1. Clone repo
 
 ```bash
