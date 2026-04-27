@@ -1,23 +1,38 @@
 // src/api.js
 // Centralised fetch helpers — all backend calls go through here.
 
-const BASE = "/api";
+const BASE = import.meta.env.VITE_API_BASE ?? "/api";
 
 async function request(path, options = {}) {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
+  let res;
+
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      credentials: "include",
+      headers: { 
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
+      },
+      ...options,
+    });
+  } catch (_err) {
+    throw new Error(
+      "Unable to reach the server. Start the backend on http://localhost:3001 and try again.",
+    );
+  }
 
   if (res.status === 204) return null;
 
-  let json;
+  let json = {};
 
-  try {
-    json = await res.json();
-  } catch (err) {
-    console.error("JSON parse failed", err);
-    return {};
+  const contentType = res.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    try {
+      json = await res.json();
+    } catch (err) {
+      console.error("JSON parse failed", err);
+    }
   }
 
   if (!res.ok) {
