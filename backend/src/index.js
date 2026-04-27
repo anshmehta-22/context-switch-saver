@@ -11,6 +11,7 @@ const { globalLimiter } = require("./middleware/rateLimiter");
 const logger = require("./middleware/logger");
 
 const app = express();
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 3001;
 
 // ─── Allowed origins ─────────────────────────────────────────────────────────
@@ -41,7 +42,7 @@ app.use(logger);
 app.use(express.json({ limit: "12mb" }));
 app.use(cookieParser());
 app.use((req, res, next) => {
-  if (req.path === '/api/auth/me') return next();
+  if (req.path === "/api/auth/me") return next();
   return globalLimiter(req, res, next);
 });
 
@@ -64,21 +65,25 @@ app.use((err, _req, res, _next) => {
 });
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
-initDb();
-const server = app.listen(PORT);
+initDb()
+  .then(() => {
+    const server = app.listen(PORT, () => {
+      console.log(`[server] http://localhost:${PORT}`);
+    });
 
-server.on("listening", () => {
-  console.log(`[server] http://localhost:${PORT}`);
-});
+    server.on("error", (err) => {
+      if (err.code === "EADDRINUSE") {
+        console.error(
+          `[server] Port ${PORT} is already in use. Stop the existing process or start with a different PORT.`,
+        );
+        process.exit(1);
+      }
 
-server.on("error", (err) => {
-  if (err.code === "EADDRINUSE") {
-    console.error(
-      `[server] Port ${PORT} is already in use. Stop the existing process or start with a different PORT.`,
-    );
+      console.error("[server] Failed to start", err);
+      process.exit(1);
+    });
+  })
+  .catch((err) => {
+    console.error("[db] Failed to initialise:", err);
     process.exit(1);
-  }
-
-  console.error("[server] Failed to start", err);
-  process.exit(1);
-});
+  });

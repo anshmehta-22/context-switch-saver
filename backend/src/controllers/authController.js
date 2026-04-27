@@ -4,8 +4,8 @@ const authService = require("../services/authService");
 function getTokenOptions() {
   return {
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
-    secure: process.env.NODE_ENV === "production",
+    sameSite: "none",
+    secure: true,
     maxAge: 7 * 24 * 60 * 60 * 1000,
   };
 }
@@ -53,14 +53,14 @@ async function login(req, res) {
 function logout(req, res) {
   res.clearCookie("token", {
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
-    secure: process.env.NODE_ENV === "production",
+    sameSite: "none",
+    secure: true,
   });
   return res.status(200).json({ data: { message: "Logged out" } });
 }
 
 async function me(req, res) {
-  const user = authService.getUserById(req.user.id);
+  const user = await authService.getUserById(req.user.id);
 
   if (!user) {
     return res.status(401).json({ error: "Unauthenticated" });
