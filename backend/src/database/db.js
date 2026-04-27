@@ -9,6 +9,7 @@ try {
 } catch {
   // Not installed — production uses Turso instead.
 }
+// Use the web client to avoid optional native module resolution issues in Node.
 const { createClient } = require("@libsql/client");
 const path = require("path");
 const fs = require("fs");
@@ -37,8 +38,14 @@ let _mode = null;
 
 function hasTursoConfig() {
   const url = (process.env.TURSO_DATABASE_URL || "").trim();
-  if (!url) return false;
-  if (url === "your_turso_url_here") return false;
+  const token = (process.env.TURSO_AUTH_TOKEN || "").trim();
+
+  if (!url || url === "your_turso_url_here") return false;
+  if (!token || token === "your_turso_token_here") return false;
+
+  // Turso URLs are typically libsql://..., but allow http(s) for compatibility.
+  if (!/^libsql:\/\//i.test(url) && !/^https?:\/\//i.test(url)) return false;
+
   return true;
 }
 
@@ -52,15 +59,19 @@ function isTursoClient() {
 function getDb() {
   if (_db) return _db;
 
-  const useTurso = hasTursoConfig() || Database === null;
-
-  if (useTurso) {
+  if (hasTursoConfig()) {
     _db = createClient({
       url: process.env.TURSO_DATABASE_URL,
       authToken: process.env.TURSO_AUTH_TOKEN,
     });
     _mode = "turso";
     return _db;
+  }
+
+  if (Database === null) {
+    throw new Error(
+      "No valid database configuration found. Set TURSO_DATABASE_URL and TURSO_AUTH_TOKEN, or install better-sqlite3 for local SQLite.",
+    );
   }
 
   fs.mkdirSync(dbDir, { recursive: true });
